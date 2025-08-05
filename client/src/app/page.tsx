@@ -51,13 +51,13 @@ const Landing: React.FC = () => {
           <div className="flex gap-3">
             <Button 
               variant="ghost" 
-              // onClick={() => navigate('/login')}
+              onClick={() => router.push('/login')}
               className="hidden sm:flex border border-transparent hover:border-primary text-black font-semibold px-5 py-2 rounded-lg transition-colors"
             >
               Sign In
             </Button>
             <Button 
-              // onClick={() => navigate('/register')}
+              onClick={() => router.push('/register')}
               className="border text-black font-semibold px-5 py-2 rounded-lg bg-gradient-to-r from-primary to-accent hover:from-accent hover:to-primary transition-colors shadow"
             >
               Get Started

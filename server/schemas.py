@@ -11,6 +11,15 @@ class UserCreate(BaseModel):
     location: Optional[str] = None
     is_mentor: bool = False
 
+    # Mentor fields (optional)
+    skills: Optional[str] = None
+    expertise: Optional[str] = None
+    experience_years: Optional[int] = None
+    languages_spoken: Optional[str] = None
+    availability: Optional[str] = None
+    hourly_rate: Optional[float] = None
+    linkedin_url: Optional[str] = None
+
 class UserRead(BaseModel):
     id: int
     full_name: str

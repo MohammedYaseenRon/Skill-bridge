@@ -1,3 +1,5 @@
+"use client";
+
 import React from 'react';
 import { motion } from 'framer-motion';
 import Logo from '@/components/Logo';
@@ -108,7 +110,7 @@ const UserDashboard: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1 }}
         >
-          <GradientButton variant="primary" className="h-16 flex-col gap-1">
+          <GradientButton variant="outline" className="h-16 flex-col gap-1">
             <Search className="h-5 w-5" />
             <span className="text-sm">Find Mentors</span>
           </GradientButton>
@@ -118,12 +120,12 @@ const UserDashboard: React.FC = () => {
             <span className="text-sm">Messages</span>
           </GradientButton>
           
-          <GradientButton variant="outline" className="h-16 flex-col gap-1">
+          <GradientButton variant="accent" className="h-16 flex-col gap-1">
             <Calendar className="h-5 w-5" />
             <span className="text-sm">Schedule</span>
           </GradientButton>
           
-          <GradientButton variant="ghost" className="h-16 flex-col gap-1">
+          <GradientButton variant="accent" className="h-16 flex-col gap-1">
             <BookOpen className="h-5 w-5" />
             <span className="text-sm">Resources</span>
           </GradientButton>

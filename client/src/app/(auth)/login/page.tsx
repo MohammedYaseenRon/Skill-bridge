@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 
 import Logo from '@/components/Logo';
 import { GradientButton } from '@/components/ui/gradient-button';
@@ -9,6 +10,7 @@ import PageWrapper from '@/components/PageWrapper';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 interface LoginData {
     email:string,
@@ -24,11 +26,11 @@ const Login: React.FC = () => {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  const router = useRouter();
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    
-    // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
@@ -38,24 +40,43 @@ const Login: React.FC = () => {
     const newErrors: Record<string, string> = {};
 
     if (!formData.email.trim()) newErrors.email = 'Email is required';
-    if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Invalid email format';
+    else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Invalid email format';
     if (!formData.password) newErrors.password = 'Password is required';
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!validateForm()) return;
-
     setIsLoading(true);
-    try {
-      
-      // Redirect to appropriate dashboard
-    } catch (error: any) {
+    setErrors({});
 
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setErrors({ general: data.detail || "Login failed" });
+      } else {
+        localStorage.setItem("token", data.access_token);
+        if (data.user.is_mentor) {
+          router.push('/mentor');
+        } else {
+          router.push('/user');
+        }
+      }
+    } catch (error) {
+      setErrors({ general: "Something went wrong. Please try again." });
     } finally {
       setIsLoading(false);
     }
@@ -88,29 +109,47 @@ const Login: React.FC = () => {
 
             {/* Login Form */}
             <motion.form 
-              onSubmit={handleSubmit} 
+              onSubmit={handleLogin} 
               className="space-y-6"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3 }}
             >
+              {errors.general && (
+                <div className="text-red-600 text-sm mb-2">{errors.general}</div>
+              )}
+
+              <label className="block text-sm font-medium mb-1" htmlFor="email">Email Address</label>
               <Input
+                id="email"
                 name="email"
                 type="email"
                 value={formData.email}
                 onChange={handleInputChange}
                 required
                 placeholder="Enter your email address"
+                aria-invalid={!!errors.email}
+                aria-describedby="email-error"
               />
+              {errors.email && (
+                <div id="email-error" className="text-red-600 text-xs mb-2">{errors.email}</div>
+              )}
 
+              <label className="block text-sm font-medium mb-1" htmlFor="password">Password</label>
               <Input
+                id="password"
                 name="password"
                 type="password"
                 value={formData.password}
                 onChange={handleInputChange}
                 required
                 placeholder="Enter your password"
+                aria-invalid={!!errors.password}
+                aria-describedby="password-error"
               />
+              {errors.password && (
+                <div id="password-error" className="text-red-600 text-xs mb-2">{errors.password}</div>
+              )}
 
               <div className="flex items-center justify-between">
                 <Link 
@@ -121,10 +160,7 @@ const Login: React.FC = () => {
                 </Link>
               </div>
 
-              <GradientButton
-                type="submit"
-                variant="hero"
-                size="lg"
+              <Button
                 disabled={isLoading}
                 className="w-full"
               >
@@ -136,7 +172,7 @@ const Login: React.FC = () => {
                 ) : (
                   'Sign In'
                 )}
-              </GradientButton>
+              </Button>
 
               <p className="text-center text-sm text-muted-foreground">
                 Don't have an account?{' '}
@@ -145,20 +181,6 @@ const Login: React.FC = () => {
                 </Link>
               </p>
             </motion.form>
-
-            {/* Demo Credentials */}
-            <motion.div
-              className="p-4 rounded-lg bg-muted/50 border border-border"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.6 }}
-            >
-              <h3 className="text-sm font-medium mb-2">Demo Credentials</h3>
-              <div className="text-xs text-muted-foreground space-y-1">
-                <p><strong>Learner:</strong> learner@demo.com / password123</p>
-                <p><strong>Mentor:</strong> mentor@demo.com / password123</p>
-              </div>
-            </motion.div>
           </motion.div>
         </div>
 

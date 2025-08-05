@@ -10,9 +10,12 @@ import { RegisterData } from '@/types';
 import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import UserTypeToggle from '@/components/UserTypeToggle';
+import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
 
 const Register: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
   const [formData, setFormData] = useState<RegisterData>({
     full_name: '',
     email: '',
@@ -69,7 +72,32 @@ const Register: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+    setIsLoading(true);
+    setErrors({});
 
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/register/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setErrors({ general: data.detail || "Registration failed" });
+      } else {
+        router.push("/login");
+      }
+    } catch (error) {
+      setErrors({ general: "Something went wrong. Please try again." });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <PageWrapper>
@@ -104,7 +132,7 @@ const Register: React.FC = () => {
 
             {/* Registration Form */}
             <motion.form 
-            //   onSubmit={handleSubmit} 
+              onSubmit={handleSubmit} 
               className="space-y-6"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -257,11 +285,8 @@ const Register: React.FC = () => {
                 </motion.div>
               )}
 
-              <GradientButton
-                type="submit"
-                variant="hero"
-                size="lg"
-                disabled={isLoading}
+              <Button
+               
                 className="w-full"
               >
                 {isLoading ? (
@@ -272,7 +297,7 @@ const Register: React.FC = () => {
                 ) : (
                   'Create Account'
                 )}
-              </GradientButton>
+              </Button>
 
               <p className="text-center text-sm text-muted-foreground">
                 Already have an account?{' '}
