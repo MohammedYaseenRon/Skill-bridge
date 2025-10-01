@@ -31,7 +31,7 @@ class UserRead(BaseModel):
     is_mentor: bool
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class MentorProfileCreate(BaseModel):
     user_id: int
@@ -54,4 +54,4 @@ class MentorProfileRead(MentorProfileCreate):
     id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
