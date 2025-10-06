@@ -88,9 +88,18 @@ except Exception as e:
     print(f"Error setting up Google ADK: {e}")
     GOOGLE_ADK_AVAILABLE = False
 
-# Local imports
-from database import create_db_and_tables
+# Local imports - Import database and create tables BEFORE router imports
+from database import create_db_and_tables, engine
 from users import router as users_router
+
+# Import recommendation router (make sure the file exists)
+try:
+    from api.recommendation import router as recommendations_router
+    RECOMMENDATIONS_AVAILABLE = True
+    print("Recommendations module imported successfully.")
+except ImportError as e:
+    print(f"Recommendations module not available: {e}")
+    RECOMMENDATIONS_AVAILABLE = False
 
 APP_NAME = "SkillBridge ADK Streaming"
 STATIC_DIR = Path("static")
@@ -103,10 +112,40 @@ async def lifespan(app: FastAPI):
     """Initializes and cleans up resources for the application."""
     print("--- Starting up application resources ---")
     
-    # 1. Database Initialization
+    # 1. Database Initialization - CRITICAL: This creates tables and seeded data
+    print("Initializing database...")
     create_db_and_tables()
+    print("Database initialized with seeded data.")
     
-    # 2. ADK Runner Initialization (only if available)
+    # 2. Verify seeded data exists
+    from sqlmodel import Session, select
+    from models import UserProfile
+    
+    try:
+        with Session(engine) as session:
+            # Check if we have mentors in the database
+            mentors = session.exec(select(UserProfile).where(UserProfile.is_mentor == True)).all()
+            learners = session.exec(select(UserProfile).where(UserProfile.is_mentor == False)).all()
+            
+            print(f"Database verification:")
+            print(f"  - Found {len(mentors)} mentors in database")
+            print(f"  - Found {len(learners)} learners in database")
+            
+            if len(mentors) == 0:
+                print("WARNING: No mentors found in database! Running seeder...")
+                # Import and run seeder if no data exists
+                try:
+                    from seed import main as run_seeder
+                    run_seeder()
+                    print("Seeder completed successfully.")
+                except ImportError:
+                    print("ERROR: seed.py not found. Please create seeded data.")
+                except Exception as e:
+                    print(f"ERROR running seeder: {e}")
+    except Exception as e:
+        print(f"Database verification failed: {e}")
+    
+    # 3. ADK Runner Initialization (only if available)
     if GOOGLE_ADK_AVAILABLE:
         try:
             with SuppressStderr():
@@ -134,7 +173,12 @@ async def lifespan(app: FastAPI):
             except Exception:
                 pass  # Ignore cleanup errors
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(
+    title="SkillBridge API",
+    description="A platform connecting learners with mentors for skill development",
+    version="1.0.0",
+    lifespan=lifespan
+)
 
 # -----------------------
 # Static + CORS
@@ -149,6 +193,76 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# -----------------------
+# Include API Routers
+# -----------------------
+# Include users router (existing)
+app.include_router(users_router, prefix="/api/users", tags=["Users"])
+app.include_router(users_router, prefix="/api/users", tags=["Users"])
+# Include recommendations router (if available)
+if RECOMMENDATIONS_AVAILABLE:
+    app.include_router(recommendations_router, prefix="/api/recommendations", tags=["Recommendations"])
+    print("Recommendations API endpoints registered.")
+else:
+    print("Recommendations API not available - endpoints not registered.")
+
+# -----------------------
+# Test endpoints for seeded data verification
+# -----------------------
+@app.get("/api/debug/mentors")
+async def debug_mentors():
+    """Debug endpoint to check seeded mentors"""
+    from sqlmodel import Session, select
+    from models import UserProfile
+    
+    try:
+        with Session(engine) as session:
+            mentors = session.exec(select(UserProfile).where(UserProfile.is_mentor == True)).all()
+            return {
+                "total_mentors": len(mentors),
+                "mentors": [
+                    {
+                        "id": m.id,
+                        "name": m.full_name,
+                        "email": m.email,
+                        "skills": m.skills,
+                        "expertise": m.expertise,
+                        "experience_years": m.experience_years,
+                        "hourly_rate": m.hourly_rate,
+                        "location": m.location
+                    } for m in mentors[:5]  # Show first 5 mentors
+                ]
+            }
+    except Exception as e:
+        return {"error": f"Failed to fetch mentors: {str(e)}"}
+
+@app.get("/api/debug/learners")
+async def debug_learners():
+    """Debug endpoint to check seeded learners"""
+    from sqlmodel import Session, select
+    from models import UserProfile
+    
+    try:
+        with Session(engine) as session:
+            learners = session.exec(select(UserProfile).where(UserProfile.is_mentor == False)).all()
+            return {
+                "total_learners": len(learners),
+                "learners": [
+                    {
+                        "id": l.id,
+                        "name": l.full_name,
+                        "email": l.email,
+                        "skills_interested": l.skills_interested,
+                        "current_skills": l.current_skills,
+                        "learning_goal": l.learning_goal,
+                        "experience_level": l.experience_level,
+                        "location": l.location
+                    } for l in learners[:5]  # Show first 5 learners
+                ]
+            }
+    except Exception as e:
+        return {"error": f"Failed to fetch learners: {str(e)}"}
 
 # -----------------------
 # AI Agent Session Setup (only if Google ADK is available)
@@ -218,6 +332,7 @@ async def read_index():
     return {
         "message": "SkillBridge API is running", 
         "google_adk": GOOGLE_ADK_AVAILABLE,
+        "recommendations": RECOMMENDATIONS_AVAILABLE,
         "status": "healthy"
     }
 
@@ -227,6 +342,7 @@ async def health_check():
     return {
         "status": "healthy",
         "google_adk_available": GOOGLE_ADK_AVAILABLE,
+        "recommendations_available": RECOMMENDATIONS_AVAILABLE,
         "database": "connected"
     }
 
@@ -308,8 +424,3 @@ else:
     async def send_message_endpoint_fallback(user_id: int):
         """Fallback send message endpoint when Google ADK is not available"""
         return {"error": "Google ADK features are not available. Please configure API credentials."}
-
-# -----------------------
-# Routers
-# -----------------------
-app.include_router(users_router)

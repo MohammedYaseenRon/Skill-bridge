@@ -1,15 +1,33 @@
 "use client";
 
-import React from 'react';
-import { motion } from 'framer-motion';
-import Logo from '@/components/Logo';
-import { GradientButton } from '@/components/ui/gradient-button';
-import PageWrapper from '@/components/PageWrapper';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Search, MessageCircle, Calendar, BookOpen, User, LogOut, Star, Clock, MapPin } from 'lucide-react';
+import React from "react";
+import { motion } from "framer-motion";
+import Logo from "@/components/Logo";
+import PageWrapper from "@/components/PageWrapper";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Search,
+  MessageCircle,
+  Calendar,
+  BookOpen,
+  User,
+  LogOut,
+  Star,
+  Clock,
+  MapPin,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
 
 const UserDashboard: React.FC = () => {
+  const router = useRouter();
   // Mock data for mentors
   const featuredMentors = [
     {
@@ -21,7 +39,7 @@ const UserDashboard: React.FC = () => {
       rating: 4.9,
       location: "San Francisco, CA",
       hourlyRate: 75,
-      image: "👩‍💻"
+      image: "👩‍💻",
     },
     {
       id: 2,
@@ -32,7 +50,7 @@ const UserDashboard: React.FC = () => {
       rating: 4.8,
       location: "Seattle, WA",
       hourlyRate: 65,
-      image: "👨‍💼"
+      image: "👨‍💼",
     },
     {
       id: 3,
@@ -43,15 +61,27 @@ const UserDashboard: React.FC = () => {
       rating: 4.9,
       location: "Los Angeles, CA",
       hourlyRate: 80,
-      image: "👩‍🔬"
-    }
+      image: "👩‍🔬",
+    },
   ];
 
   const recentActivity = [
-    { action: "Scheduled session with John Doe", time: "2 hours ago", type: "calendar" },
-    { action: "Completed lesson: Introduction to React", time: "1 day ago", type: "book" },
-    { action: "New message from mentor Sarah", time: "2 days ago", type: "message" },
-    { action: "Profile updated", time: "1 week ago", type: "user" }
+    {
+      action: "Scheduled session with John Doe",
+      time: "2 hours ago",
+      type: "calendar",
+    },
+    {
+      action: "Completed lesson: Introduction to React",
+      time: "1 day ago",
+      type: "book",
+    },
+    {
+      action: "New message from mentor Sarah",
+      time: "2 days ago",
+      type: "message",
+    },
+    { action: "Profile updated", time: "1 week ago", type: "user" },
   ];
 
   const upcomingSessions = [
@@ -59,14 +89,14 @@ const UserDashboard: React.FC = () => {
       mentor: "Sarah Johnson",
       topic: "React Best Practices",
       date: "Tomorrow",
-      time: "2:00 PM"
+      time: "2:00 PM",
     },
     {
       mentor: "Michael Chen",
       topic: "Product Roadmap Planning",
       date: "Friday",
-      time: "10:00 AM"
-    }
+      time: "10:00 AM",
+    },
   ];
 
   return (
@@ -75,16 +105,16 @@ const UserDashboard: React.FC = () => {
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
           <Logo size="sm" />
-          
+
           <div className="flex items-center gap-4">
-            <GradientButton variant="ghost" size="sm">
+            <Button variant="ghost" size="sm">
               <User className="h-4 w-4 mr-2" />
               {/* {user?.full_name} */}
-            </GradientButton>
-            <GradientButton variant="outline" size="sm">
+            </Button>
+            <Button variant="outline" size="sm">
               <LogOut className="h-4 w-4 mr-2" />
               Logout
-            </GradientButton>
+            </Button>
           </div>
         </div>
       </header>
@@ -100,7 +130,9 @@ const UserDashboard: React.FC = () => {
           <h1 className="text-3xl font-bold mb-2">
             {/* Welcome back, <span className="gradient-primary bg-clip-text text-transparent">{user?.full_name}</span>! 👋 */}
           </h1>
-          <p className="text-muted-foreground">Continue your learning journey and connect with amazing mentors.</p>
+          <p className="text-muted-foreground">
+            Continue your learning journey and connect with amazing mentors.
+          </p>
         </motion.div>
 
         {/* Quick Actions */}
@@ -110,25 +142,33 @@ const UserDashboard: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1 }}
         >
-          <GradientButton variant="outline" className="h-16 flex-col gap-1">
+          <Button onClick={() => router.push("/agent")} className="flex flex-col items-center justify-center gap-1 h-16 rounded-xl border bg-white text-black shadow-sm hover:bg-gray-50 hover:shadow-md transition-all duration-200 ease-in-out">
             <Search className="h-5 w-5" />
-            <span className="text-sm">Find Mentors</span>
-          </GradientButton>
-          
-          <GradientButton variant="accent" className="h-16 flex-col gap-1">
+            <span className="text-sm hover:text-black">Agent</span>
+          </Button>
+
+          <Button onClick={() => router.push("/user/recommendations")} className="flex flex-col items-center justify-center gap-1 h-16 rounded-xl border bg-white text-black shadow-sm hover:bg-gray-50 hover:shadow-md transition-all duration-200 ease-in-out">
+            <Search className="h-5 w-5" />
+            <span className="text-sm ">Find Mentors</span>
+          </Button>
+
+          <Button className="flex flex-col items-center justify-center gap-1 h-16 rounded-xl border bg-white text-black shadow-sm hover:bg-gray-50 hover:shadow-md transition-all duration-200 ease-in-out">
             <MessageCircle className="h-5 w-5" />
             <span className="text-sm">Messages</span>
-          </GradientButton>
-          
-          <GradientButton variant="accent" className="h-16 flex-col gap-1">
+          </Button>
+
+          <Button className="flex flex-col items-center justify-center gap-1 h-16 rounded-xl border bg-white text-black shadow-sm hover:bg-gray-50 hover:shadow-md transition-all duration-200 ease-in-out">
             <Calendar className="h-5 w-5" />
             <span className="text-sm">Schedule</span>
-          </GradientButton>
-          
-          <GradientButton variant="accent" className="h-16 flex-col gap-1">
-            <BookOpen className="h-5 w-5" />
-            <span className="text-sm">Resources</span>
-          </GradientButton>
+          </Button>
+
+          <Button
+            variant="outline"
+            className="flex flex-col items-center justify-center gap-1 h-16 rounded-xl border bg-white text-black shadow-sm hover:bg-gray-50 hover:shadow-md transition-all duration-200 ease-in-out"
+          >
+            <BookOpen className="h-5 w-5 text-black/80" />
+            <span className="text-sm font-medium">Resources</span>
+          </Button>
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -163,9 +203,13 @@ const UserDashboard: React.FC = () => {
                       <div className="text-3xl">{mentor.image}</div>
                       <div className="flex-1">
                         <h3 className="font-semibold">{mentor.name}</h3>
-                        <p className="text-sm text-muted-foreground">{mentor.title}</p>
-                        <p className="text-sm text-accent">{mentor.expertise}</p>
-                        
+                        <p className="text-sm text-muted-foreground">
+                          {mentor.title}
+                        </p>
+                        <p className="text-sm text-accent">
+                          {mentor.expertise}
+                        </p>
+
                         <div className="flex items-center gap-4 mt-2">
                           <div className="flex items-center gap-1">
                             <Star className="h-3 w-3 text-yellow-400 fill-current" />
@@ -173,16 +217,18 @@ const UserDashboard: React.FC = () => {
                           </div>
                           <div className="flex items-center gap-1">
                             <MapPin className="h-3 w-3 text-muted-foreground" />
-                            <span className="text-xs text-muted-foreground">{mentor.location}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {mentor.location}
+                            </span>
                           </div>
                           <Badge variant="secondary" className="text-xs">
                             ${mentor.hourlyRate}/hr
                           </Badge>
                         </div>
                       </div>
-                      <GradientButton size="sm" variant="primary">
+                      <Button size="sm" variant="ghost">
                         Connect
-                      </GradientButton>
+                      </Button>
                     </motion.div>
                   ))}
                 </CardContent>
@@ -213,14 +259,24 @@ const UserDashboard: React.FC = () => {
                         transition={{ duration: 0.4, delay: 0.1 * index }}
                       >
                         <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                          {activity.type === 'calendar' && <Calendar className="h-4 w-4 text-primary" />}
-                          {activity.type === 'book' && <BookOpen className="h-4 w-4 text-accent" />}
-                          {activity.type === 'message' && <MessageCircle className="h-4 w-4 text-blue-500" />}
-                          {activity.type === 'user' && <User className="h-4 w-4 text-muted-foreground" />}
+                          {activity.type === "calendar" && (
+                            <Calendar className="h-4 w-4 text-primary" />
+                          )}
+                          {activity.type === "book" && (
+                            <BookOpen className="h-4 w-4 text-accent" />
+                          )}
+                          {activity.type === "message" && (
+                            <MessageCircle className="h-4 w-4 text-blue-500" />
+                          )}
+                          {activity.type === "user" && (
+                            <User className="h-4 w-4 text-muted-foreground" />
+                          )}
                         </div>
                         <div className="flex-1">
                           <p className="text-sm">{activity.action}</p>
-                          <p className="text-xs text-muted-foreground">{activity.time}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {activity.time}
+                          </p>
                         </div>
                       </motion.div>
                     ))}
@@ -255,17 +311,23 @@ const UserDashboard: React.FC = () => {
                       transition={{ duration: 0.3, delay: 0.1 * index }}
                     >
                       <h4 className="font-medium text-sm">{session.topic}</h4>
-                      <p className="text-xs text-muted-foreground">with {session.mentor}</p>
+                      <p className="text-xs text-muted-foreground">
+                        with {session.mentor}
+                      </p>
                       <div className="flex justify-between items-center mt-2">
-                        <span className="text-xs text-primary">{session.date}</span>
-                        <span className="text-xs font-medium">{session.time}</span>
+                        <span className="text-xs text-primary">
+                          {session.date}
+                        </span>
+                        <span className="text-xs font-medium">
+                          {session.time}
+                        </span>
                       </div>
                     </motion.div>
                   ))}
-                  
-                  <GradientButton variant="outline" size="sm" className="w-full">
+
+                  <Button variant="outline" size="sm" className="w-full">
                     View All Sessions
-                  </GradientButton>
+                  </Button>
                 </CardContent>
               </Card>
             </motion.div>
@@ -287,24 +349,30 @@ const UserDashboard: React.FC = () => {
                       <span className="text-sm font-medium">12/20</span>
                     </div>
                     <div className="w-full bg-muted rounded-full h-2">
-                      <div className="bg-gradient-primary h-2 rounded-full" style={{ width: '60%' }}></div>
+                      <div
+                        className="bg-gradient-primary h-2 rounded-full"
+                        style={{ width: "60%" }}
+                      ></div>
                     </div>
                   </div>
-                  
+
                   <div>
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-sm">Sessions Completed</span>
                       <span className="text-sm font-medium">8/15</span>
                     </div>
                     <div className="w-full bg-muted rounded-full h-2">
-                      <div className="bg-accent h-2 rounded-full" style={{ width: '53%' }}></div>
+                      <div
+                        className="bg-accent h-2 rounded-full"
+                        style={{ width: "53%" }}
+                      ></div>
                     </div>
                   </div>
 
                   <div className="pt-2">
-                    <GradientButton variant="ghost" size="sm" className="w-full">
+                    <Button variant="ghost" size="sm" className="w-full">
                       View Detailed Progress
-                    </GradientButton>
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
