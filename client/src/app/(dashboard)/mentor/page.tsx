@@ -1,175 +1,281 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import Logo from '@/components/Logo';
-import { GradientButton } from '@/components/ui/gradient-button';
 import PageWrapper from '@/components/PageWrapper';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, MessageCircle, Users, TrendingUp, User, LogOut, Star, Clock, DollarSign, BookOpen, MoreHorizontal, Bell, Settings, BarChart3, Video, Mail, MessageSquare, Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  Calendar, MessageCircle, Users, TrendingUp, User, LogOut,
+  Star, Clock, DollarSign, BookOpen, Bell, Settings,
+  BarChart3, MapPin, Briefcase, Globe, Linkedin, Edit2, X, Loader2, CheckCircle
+} from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
+import { api } from '@/lib/api';
+import SessionDashboard from '@/components/SessionDashboard';
+
+interface MenteeSummary {
+  id: number;
+  name: string;
+  email: string;
+  field: string;
+  progress: number;
+  experience_level: string;
+  location?: string;
+}
+
+interface DashboardData {
+  mentor: {
+    id: number;
+    full_name: string;
+    email: string;
+    bio?: string;
+    skills?: string;
+    expertise?: string;
+    experience_years?: number;
+    hourly_rate?: number;
+    company?: string;
+    job_title?: string;
+    location?: string;
+    linkedin_url?: string;
+    languages_spoken?: string;
+    mentor_availability?: string;
+  };
+  stats: {
+    total_mentees: number;
+    total_mentors: number;
+    sessions_this_month: number;
+    average_rating: number;
+    earnings_this_month: number;
+  };
+  recent_mentees: MenteeSummary[];
+}
+
+const avatarEmojis = ['👨‍💻', '👩‍💻', '👨‍🔬', '👩‍🔬', '👨‍🎨', '👩‍🎨', '👨‍💼', '👩‍💼'];
 
 const MentorDashboard: React.FC = () => {
+  const { user, logout, isLoading: authLoading, isAuthenticated } = useAuth();
+  const router = useRouter();
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [profileForm, setProfileForm] = useState<Record<string, string | number>>({});
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
-  // Mock data for mentees and activity
-  const recentMentees = [
-    {
-      id: 1,
-      name: "Alex Thompson",
-      field: "Frontend Development",
-      progress: 85,
-      lastSession: "2 days ago",
-      avatar: "👨‍💻"
-    },
-    {
-      id: 2,
-      name: "Maria Garcia",
-      field: "UX Design",
-      progress: 72,
-      lastSession: "1 week ago", 
-      avatar: "👩‍🎨"
-    },
-    {
-      id: 3,
-      name: "James Wilson",
-      field: "Data Science",
-      progress: 90,
-      lastSession: "Yesterday",
-      avatar: "👨‍🔬"
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.push('/login');
+      return;
     }
-  ];
-
-  const upcomingSessions = [
-    {
-      mentee: "Alex Thompson",
-      topic: "Advanced React Patterns",
-      date: "Today",
-      time: "3:00 PM"
-    },
-    {
-      mentee: "Maria Garcia", 
-      topic: "Design System Review",
-      date: "Tomorrow",
-      time: "11:00 AM"
-    },
-    {
-      mentee: "James Wilson",
-      topic: "ML Model Optimization",
-      date: "Friday",
-      time: "2:00 PM"
+    if (!authLoading && user && !user.is_mentor) {
+      router.push('/user');
+      return;
     }
-  ];
+    if (isAuthenticated && user?.is_mentor) {
+      fetchDashboard();
+    }
+  }, [authLoading, isAuthenticated, user]);
 
-  const stats = [
-    { title: "Total Mentees", value: "24", icon: Users, color: "text-primary" },
-    { title: "Sessions This Month", value: "18", icon: Calendar, color: "text-accent" },
-    { title: "Average Rating", value: "4.8", icon: Star, color: "text-yellow-500" },
-    { title: "Earnings This Month", value: "$1,240", icon: DollarSign, color: "text-green-500" }
-  ];
+  const fetchDashboard = async () => {
+    try {
+      setIsLoading(true);
+      const data = await api.get<DashboardData>('/api/users/mentor/dashboard');
+      setDashboardData(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load dashboard');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  const recentActivity = [
-    { action: "Completed session with Alex Thompson", time: "2 hours ago", type: "session" },
-    { action: "New mentee request from Sarah Kim", time: "1 day ago", type: "request" },
-    { action: "Payment received: $75", time: "2 days ago", type: "payment" },
-    { action: "Profile viewed by 12 potential mentees", time: "3 days ago", type: "view" }
+  const handleLogout = () => {
+    logout();
+    router.push('/');
+  };
+
+  const openEditProfile = () => {
+    if (!dashboardData) return;
+    const m = dashboardData.mentor;
+    setProfileForm({
+      bio: m.bio || '',
+      skills: m.skills || '',
+      expertise: m.expertise || '',
+      experience_years: m.experience_years || 0,
+      hourly_rate: m.hourly_rate || 0,
+      company: m.company || '',
+      job_title: m.job_title || '',
+      location: m.location || '',
+      linkedin_url: m.linkedin_url || '',
+      languages_spoken: m.languages_spoken || '',
+      mentor_availability: m.mentor_availability || '',
+    });
+    setEditingProfile(true);
+  };
+
+  const handleSaveProfile = async () => {
+    setIsSaving(true);
+    try {
+      await api.put('/api/users/me', profileForm);
+      setSaveSuccess(true);
+      setEditingProfile(false);
+      fetchDashboard(); // Refresh data
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update profile');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (authLoading || isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50">
+        <div className="text-center space-y-4">
+          <div className="w-16 h-16 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto" />
+          <p className="text-slate-500 font-medium">Loading your dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50">
+        <Card className="max-w-md w-full mx-4">
+          <CardContent className="p-8 text-center">
+            <div className="text-red-500 text-5xl mb-4">⚠️</div>
+            <h3 className="text-lg font-semibold text-slate-800 mb-2">Failed to Load Dashboard</h3>
+            <p className="text-slate-500 mb-6 text-sm">{error}</p>
+            <Button onClick={fetchDashboard} className="w-full">Try Again</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const mentor = dashboardData?.mentor;
+  const stats = dashboardData?.stats;
+  const recentMentees = dashboardData?.recent_mentees || [];
+
+  const statsCards = [
+    { title: "Total Mentees", value: stats?.total_mentees ?? 0, icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
+    { title: "Sessions This Month", value: stats?.sessions_this_month ?? 0, icon: Calendar, color: "text-violet-600", bg: "bg-violet-50" },
+    { title: "Average Rating", value: stats?.average_rating?.toFixed(1) ?? "–", icon: Star, color: "text-amber-500", bg: "bg-amber-50" },
+    { title: "Earnings This Month", value: `$${(stats?.earnings_this_month ?? 0).toLocaleString()}`, icon: DollarSign, color: "text-emerald-600", bg: "bg-emerald-50" },
   ];
 
   return (
     <PageWrapper>
       {/* Header */}
-      <header className="border-b border-border/30 bg-gradient-to-r from-background/95 via-background/98 to-background/95 backdrop-blur-md sticky top-0 z-50 shadow-sm" role="banner">
+      <header className="border-b border-slate-200/60 bg-white/95 backdrop-blur-md sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
             <Logo size="sm" />
-            <div className="h-6 w-px bg-border/50"></div>
-            <Badge variant="secondary" className="bg-gradient-to-r from-primary/10 to-accent/10 text-primary border border-primary/20 px-3 py-1" aria-label="User role">
+            <div className="h-6 w-px bg-slate-200" />
+            <Badge className="bg-gradient-to-r from-primary/10 to-blue-500/10 text-primary border border-primary/20 px-3 py-1 rounded-full text-xs font-semibold">
               ✨ Mentor
             </Badge>
           </div>
-          
-          <nav className="flex items-center gap-3" role="navigation" aria-label="User navigation">
-            <button 
-              className="relative p-2.5 rounded-xl bg-muted/50 hover:bg-muted transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2 group"
-              aria-label="Notifications"
-            >
-              <Bell className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-background"></div>
+
+          <nav className="flex items-center gap-2">
+            <button className="relative p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 transition-all">
+              <Bell className="h-4 w-4 text-slate-600" />
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white" />
             </button>
-            <button 
-              className="p-2.5 rounded-xl bg-muted/50 hover:bg-muted transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2 group"
-              aria-label="Settings"
-            >
-              <Settings className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+            <button onClick={openEditProfile} className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 transition-all" title="Edit Profile">
+              <Edit2 className="h-4 w-4 text-slate-600" />
             </button>
-            <div className="h-6 w-px bg-border/50"></div>
-            <GradientButton 
-              variant="ghost" 
-              size="sm" 
-              aria-label="User profile" 
-              className="bg-muted/30 hover:bg-muted/50 text-foreground border border-border/50 px-4 py-2 rounded-xl transition-all duration-200"
+            <div className="h-6 w-px bg-slate-200" />
+            <Button variant="ghost" size="sm" className="text-slate-700 hover:text-slate-900 gap-2">
+              <User className="h-4 w-4" />
+              {mentor?.full_name?.split(' ')[0] || 'Profile'}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLogout}
+              className="border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 gap-2"
             >
-              <User className="h-4 w-4 mr-2" />
-              Profile
-            </GradientButton>
-            <GradientButton 
-              variant="outline" 
-              size="sm" 
-              aria-label="Logout" 
-              className="border border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-300 px-4 py-2 rounded-xl transition-all duration-200"
-            >
-              <LogOut className="h-4 w-4 mr-2" />
+              <LogOut className="h-4 w-4" />
               Logout
-            </GradientButton>
+            </Button>
           </nav>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-8 space-y-8" role="main">
+      <main className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+        {/* Save Success Toast */}
+        {saveSuccess && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="fixed top-20 right-6 z-50 bg-emerald-500 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-2"
+          >
+            <CheckCircle className="h-5 w-5" />
+            Profile updated successfully!
+          </motion.div>
+        )}
+
         {/* Welcome Section */}
         <motion.section
-          className="text-center py-12 px-8 rounded-2xl bg-gradient-to-br from-primary/5 via-accent/5 to-primary/10 border border-primary/10 mx-auto max-w-4xl"
+          className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary to-blue-600 p-8 text-white"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          aria-labelledby="welcome-heading"
         >
-          <h1 id="welcome-heading" className="text-4xl md:text-5xl font-bold mb-4 text-foreground leading-tight">
-            Welcome back! <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">Ready to inspire</span>
-          </h1>
-          <p className="text-muted-foreground text-lg md:text-xl max-w-3xl mx-auto leading-relaxed">
-            Transform lives through mentorship. Your guidance shapes the next generation of innovators and future leaders.
-          </p>
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-32 translate-x-32" />
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-24 -translate-x-16" />
+          <div className="relative z-10">
+            <h1 className="text-3xl md:text-4xl font-bold mb-2">
+              Welcome back, {mentor?.full_name?.split(' ')[0]}! 👋
+            </h1>
+            <p className="text-blue-100 text-lg max-w-2xl">
+              {mentor?.job_title && mentor?.company
+                ? `${mentor.job_title} at ${mentor.company} • `
+                : ''
+              }
+              Ready to inspire your mentees today?
+            </p>
+            {mentor?.skills && (
+              <div className="flex flex-wrap gap-2 mt-4">
+                {mentor.skills.split(',').slice(0, 4).map((skill, i) => (
+                  <span key={i} className="px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-sm font-medium text-white border border-white/30">
+                    {skill.trim()}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
         </motion.section>
-
 
         {/* Stats Grid */}
         <motion.section
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1 }}
-          aria-labelledby="stats-heading"
         >
-          <h2 id="stats-heading" className="sr-only">Dashboard Statistics</h2>
-          {stats.map((stat, index) => (
+          {statsCards.map((stat, index) => (
             <motion.div
               key={stat.title}
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.4, delay: 0.1 * index }}
+              transition={{ duration: 0.4, delay: 0.08 * index }}
             >
-              <Card className="relative group overflow-hidden border-0 bg-gradient-to-br from-background to-muted/30 shadow-lg hover:shadow-xl transition-all duration-300 focus-within:ring-2 focus-within:ring-primary/50 focus-within:ring-offset-2">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <CardContent className="relative p-6">
+              <Card className="border-0 shadow-md hover:shadow-lg transition-all duration-300 bg-white">
+                <CardContent className="p-6">
                   <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">{stat.title}</p>
-                      <p className="text-3xl font-bold text-foreground" aria-label={`${stat.title}: ${stat.value}`}>
-                        {stat.value}
-                      </p>
+                    <div>
+                      <p className="text-sm text-slate-500 font-medium">{stat.title}</p>
+                      <p className="text-3xl font-bold text-slate-900 mt-1">{stat.value}</p>
                     </div>
-                    <div className={`p-4 rounded-2xl bg-gradient-to-br from-background/50 to-muted/50 border border-border/30`} aria-hidden="true">
-                      <stat.icon className={`h-7 w-7 ${stat.color}`} />
+                    <div className={`w-12 h-12 ${stat.bg} rounded-2xl flex items-center justify-center`}>
+                      <stat.icon className={`h-6 w-6 ${stat.color}`} />
                     </div>
                   </div>
                 </CardContent>
@@ -184,48 +290,36 @@ const MentorDashboard: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          aria-labelledby="quick-actions-heading"
         >
-          <h2 id="quick-actions-heading" className="sr-only">Quick Actions</h2>
-          
-          <GradientButton 
-            variant="primary" 
-            className="h-20 flex-col gap-2 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 focus:ring-2 focus:ring-primary/50 focus:ring-offset-2 text-white hover:text-white border-0 bg-gradient-to-br from-primary to-primary/80"
-            aria-label="Open schedule management"
-          >
-            <Calendar className="h-6 w-6 text-white drop-shadow-sm" aria-hidden="true" />
-            <span className="text-sm font-medium text-white">Schedule</span>
-          </GradientButton>
-          
-          <GradientButton 
-            variant="accent" 
-            className="h-20 flex-col gap-2 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 focus:ring-2 focus:ring-accent/50 focus:ring-offset-2 text-white hover:text-white border-0 bg-gradient-to-br from-accent to-accent/80 hover:from-accent/90 hover:to-accent/90"
-            aria-label="Open messages"
-          >
-            <MessageCircle className="h-6 w-6 text-white drop-shadow-sm" aria-hidden="true" />
-            <span className="text-sm font-medium text-white drop-shadow-sm">Messages</span>
-          </GradientButton>
-          
-          <GradientButton 
-            variant="outline" 
-            className="h-20 flex-col gap-2 rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 focus:ring-2 focus:ring-primary/50 focus:ring-offset-2 border-2 border-primary/30 text-primary hover:bg-primary hover:text-white hover:border-primary bg-gradient-to-br from-primary/5 to-primary/10"
-            aria-label="View my mentees"
-          >
-            <Users className="h-6 w-6" aria-hidden="true" />
-            <span className="text-sm font-medium">My Mentees</span>
-          </GradientButton>
-          
-          <GradientButton 
-            variant="ghost" 
-            className="h-20 flex-col gap-2 rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 focus:ring-2 focus:ring-primary/50 focus:ring-offset-2 bg-gradient-to-br from-muted/50 to-muted/30 text-foreground hover:bg-muted hover:text-foreground border border-border/50"
-            aria-label="View analytics"
-          >
-            <TrendingUp className="h-6 w-6 text-foreground" aria-hidden="true" />
-            <span className="text-sm font-medium text-foreground">Analytics</span>
-          </GradientButton>
+          {[
+            { icon: Calendar, label: "Schedule", color: "from-blue-600 to-blue-700 text-white", onClick: () => { } },
+            { icon: MessageCircle, label: "Messages", color: "from-violet-600 to-violet-700 text-white", onClick: () => router.push("/messages") },
+            { icon: Users, label: "My Mentees", color: "from-emerald-600 to-emerald-700 text-white", onClick: () => { } },
+            { icon: BarChart3, label: "Analytics", color: "from-orange-500 to-orange-600 text-white", onClick: () => { } },
+          ].map((action, i) => (
+            <motion.button
+              key={action.label}
+              whileHover={{ scale: 1.03, y: -2 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={action.onClick}
+              className={`h-20 flex flex-col items-center justify-center gap-2 rounded-2xl bg-gradient-to-br ${action.color} shadow-md hover:shadow-lg transition-all duration-200`}
+            >
+              <action.icon className="h-6 w-6" />
+              <span className="text-sm font-semibold">{action.label}</span>
+            </motion.button>
+          ))}
         </motion.section>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Sessions Section */}
+        <motion.section
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.25 }}
+        >
+          <SessionDashboard isMentor={true} />
+        </motion.section>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
             {/* Recent Mentees */}
@@ -233,121 +327,133 @@ const MentorDashboard: React.FC = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.3 }}
-              aria-labelledby="recent-mentees-heading"
             >
-              <Card className="border-0 bg-gradient-to-br from-background to-muted/20 shadow-xl rounded-2xl overflow-hidden">
-                <CardHeader className="bg-gradient-to-r from-primary/10 via-accent/5 to-primary/10 border-b border-border/30 pb-6">
-                  <CardTitle className="flex items-center gap-3 text-xl" id="recent-mentees-heading">
-                    <div className="p-2 rounded-xl bg-primary/10 border border-primary/20">
-                      <Users className="h-5 w-5 text-primary" aria-hidden="true" />
-                    </div>
+              <Card className="border-0 shadow-md bg-white">
+                <CardHeader className="border-b border-slate-100 pb-4">
+                  <CardTitle className="flex items-center gap-2 text-slate-900">
+                    <Users className="h-5 w-5 text-primary" />
                     Recent Mentees
                   </CardTitle>
-                  <CardDescription className="text-base">
-                    Track progress and engage with your most active mentees
-                  </CardDescription>
+                  <CardDescription>Learners connected to your profile</CardDescription>
                 </CardHeader>
-                <CardContent className="p-6 space-y-4">
-                  {recentMentees.map((mentee, index) => (
-                    <motion.article
-                      key={mentee.id}
-                      className="group flex items-center gap-4 p-5 rounded-2xl border border-border/30 bg-gradient-to-r from-background to-muted/30 hover:from-primary/5 hover:to-accent/5 hover:shadow-lg transition-all duration-300 cursor-pointer focus-within:ring-2 focus-within:ring-primary/50 focus-within:ring-offset-2"
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.4, delay: 0.1 * index }}
-                      whileHover={{ scale: 1.02 }}
-                      role="button"
-                      tabIndex={0}
-                      aria-label={`View ${mentee.name}'s profile`}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          // Handle mentee selection
-                        }
-                      }}
-                    >
-                      <div className="text-4xl bg-gradient-to-br from-primary/10 to-accent/10 p-3 rounded-2xl border border-primary/20" aria-hidden="true">
-                        {mentee.avatar}
-                      </div>
-                      <div className="flex-1 space-y-3">
-                        <div>
-                          <h3 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">{mentee.name}</h3>
-                          <p className="text-sm text-muted-foreground">{mentee.field}</p>
-                        </div>
-                        <div className="space-y-2" role="progressbar" aria-valuenow={mentee.progress} aria-valuemin={0} aria-valuemax={100} aria-label={`Progress: ${mentee.progress}%`}>
-                          <div className="flex justify-between items-center">
-                            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Progress</span>
-                            <span className="text-sm font-bold text-primary">{mentee.progress}%</span>
-                          </div>
-                          <div className="w-full bg-muted/50 rounded-full h-3 overflow-hidden">
-                            <div 
-                              className="bg-gradient-to-r from-primary to-accent h-3 rounded-full transition-all duration-700 ease-out shadow-sm" 
-                              style={{ width: `${mentee.progress}%` }}
-                            ></div>
-                          </div>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          Last session: <time className="font-medium">{mentee.lastSession}</time>
-                        </p>
-                      </div>
-                      <GradientButton 
-                        size="sm" 
-                        variant="outline" 
-                        aria-label={`View ${mentee.name}'s profile`}
-                        className="focus:ring-2 focus:ring-primary/50 focus:ring-offset-2 border-2 border-primary/30 text-primary hover:bg-primary hover:text-white transition-all duration-200 rounded-xl px-4 py-2"
+                <CardContent className="p-5 space-y-3">
+                  {recentMentees.length === 0 ? (
+                    <div className="text-center py-10 text-slate-400">
+                      <Users className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                      <p>No mentees yet. Complete your profile to attract learners!</p>
+                    </div>
+                  ) : (
+                    recentMentees.map((mentee, index) => (
+                      <motion.div
+                        key={mentee.id}
+                        className="flex items-center gap-4 p-4 rounded-2xl border border-slate-100 bg-slate-50/50 hover:bg-blue-50/50 hover:border-blue-200 transition-all duration-200 cursor-pointer group"
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.3, delay: 0.05 * index }}
+                        whileHover={{ scale: 1.01 }}
                       >
-                        View Profile
-                      </GradientButton>
-                    </motion.article>
-                  ))}
+                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/10 to-blue-500/10 flex items-center justify-center text-2xl border border-primary/10">
+                          {avatarEmojis[index % avatarEmojis.length]}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-slate-900 group-hover:text-primary transition-colors truncate">{mentee.name}</h3>
+                          <p className="text-sm text-slate-500 truncate">{mentee.field || 'General Learning'}</p>
+                          <div className="flex items-center gap-3 mt-2">
+                            <div className="flex-1">
+                              <div className="flex justify-between text-xs mb-1">
+                                <span className="text-slate-400">Progress</span>
+                                <span className="font-semibold text-primary">{mentee.progress}%</span>
+                              </div>
+                              <div className="w-full bg-slate-200 rounded-full h-2">
+                                <div
+                                  className="bg-gradient-to-r from-primary to-blue-500 h-2 rounded-full transition-all duration-700"
+                                  style={{ width: `${mentee.progress}%` }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-1 items-end">
+                          <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700 border-0">
+                            {mentee.experience_level || 'beginner'}
+                          </Badge>
+                          {mentee.location && (
+                            <span className="text-xs text-slate-400 flex items-center gap-1">
+                              <MapPin className="h-3 w-3" />{mentee.location}
+                            </span>
+                          )}
+                        </div>
+                      </motion.div>
+                    ))
+                  )}
                 </CardContent>
               </Card>
             </motion.section>
 
-            {/* Recent Activity */}
+            {/* Mentor Profile Info Card */}
             <motion.section
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.4 }}
-              aria-labelledby="recent-activity-heading"
             >
-              <Card className="border-0 bg-gradient-to-br from-background to-muted/20 shadow-xl rounded-2xl overflow-hidden">
-                <CardHeader className="bg-gradient-to-r from-accent/10 via-primary/5 to-accent/10 border-b border-border/30 pb-6">
-                  <CardTitle className="flex items-center gap-3 text-xl" id="recent-activity-heading">
-                    <div className="p-2 rounded-xl bg-accent/10 border border-accent/20">
-                      <TrendingUp className="h-5 w-5 text-accent" aria-hidden="true" />
-                    </div>
-                    Recent Activity
-                  </CardTitle>
-                  <CardDescription className="text-base">
-                    Stay updated with your latest mentoring activities
-                  </CardDescription>
+              <Card className="border-0 shadow-md bg-white">
+                <CardHeader className="border-b border-slate-100 pb-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2 text-slate-900">
+                      <User className="h-5 w-5 text-primary" />
+                      My Profile
+                    </CardTitle>
+                    <Button variant="outline" size="sm" onClick={openEditProfile} className="gap-2 text-xs">
+                      <Edit2 className="h-3 w-3" />
+                      Edit
+                    </Button>
+                  </div>
                 </CardHeader>
-                <CardContent className="p-6">
-                  <div className="space-y-4" role="list">
-                    {recentActivity.map((activity, index) => (
-                      <motion.div
-                        key={index}
-                        className="flex items-center gap-4 p-4 rounded-2xl bg-gradient-to-r from-background to-muted/30 hover:from-accent/5 hover:to-primary/5 transition-all duration-300 border border-border/30"
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.4, delay: 0.1 * index }}
-                        role="listitem"
-                      >
-                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center border border-primary/20" aria-hidden="true">
-                          {activity.type === 'session' && <BookOpen className="h-5 w-5 text-primary" />}
-                          {activity.type === 'request' && <Users className="h-5 w-5 text-accent" />}
-                          {activity.type === 'payment' && <DollarSign className="h-5 w-5 text-green-500" />}
-                          {activity.type === 'view' && <TrendingUp className="h-5 w-5 text-blue-500" />}
+                <CardContent className="p-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {mentor?.bio && (
+                      <div className="sm:col-span-2">
+                        <p className="text-xs text-slate-400 uppercase font-medium tracking-wider mb-1">About</p>
+                        <p className="text-sm text-slate-700 leading-relaxed">{mentor.bio}</p>
+                      </div>
+                    )}
+                    {mentor?.skills && (
+                      <div className="sm:col-span-2">
+                        <p className="text-xs text-slate-400 uppercase font-medium tracking-wider mb-2">Skills</p>
+                        <div className="flex flex-wrap gap-2">
+                          {mentor.skills.split(',').map((s, i) => (
+                            <span key={i} className="px-3 py-1 bg-primary/5 text-primary text-xs rounded-full border border-primary/20 font-medium">
+                              {s.trim()}
+                            </span>
+                          ))}
                         </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-foreground">{activity.action}</p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            <time className="font-medium">{activity.time}</time>
-                          </p>
+                      </div>
+                    )}
+                    {[
+                      { icon: Briefcase, label: 'Company', value: mentor?.company },
+                      { icon: Briefcase, label: 'Job Title', value: mentor?.job_title },
+                      { icon: MapPin, label: 'Location', value: mentor?.location },
+                      { icon: Globe, label: 'Languages', value: mentor?.languages_spoken },
+                      { icon: Clock, label: 'Availability', value: mentor?.mentor_availability },
+                      { icon: DollarSign, label: 'Hourly Rate', value: mentor?.hourly_rate ? `$${mentor.hourly_rate}/hr` : 'Free' },
+                    ].filter(f => f.value).map(({ icon: Icon, label, value }) => (
+                      <div key={label} className="flex items-start gap-2">
+                        <Icon className="h-4 w-4 text-slate-400 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <p className="text-xs text-slate-400">{label}</p>
+                          <p className="text-sm text-slate-800 font-medium">{value}</p>
                         </div>
-                      </motion.div>
+                      </div>
                     ))}
+                    {mentor?.linkedin_url && (
+                      <div className="sm:col-span-2">
+                        <a href={mentor.linkedin_url} target="_blank" rel="noopener noreferrer"
+                          className="flex items-center gap-2 text-sm text-blue-600 hover:underline">
+                          <Linkedin className="h-4 w-4" />
+                          LinkedIn Profile
+                        </a>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -355,112 +461,102 @@ const MentorDashboard: React.FC = () => {
           </div>
 
           {/* Sidebar */}
-          <aside className="space-y-6" role="complementary" aria-label="Dashboard sidebar">
-            {/* Upcoming Sessions */}
-            <motion.section
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.5 }}
-              aria-labelledby="upcoming-sessions-heading"
-            >
-              <Card className="border-0 bg-gradient-to-br from-background to-muted/20 shadow-xl rounded-2xl overflow-hidden">
-                <CardHeader className="bg-gradient-to-r from-accent/10 via-primary/5 to-accent/10 border-b border-border/30 pb-6">
-                  <CardTitle className="flex items-center gap-3" id="upcoming-sessions-heading">
-                    <div className="p-2 rounded-xl bg-accent/10 border border-accent/20">
-                      <Clock className="h-4 w-4 text-accent" aria-hidden="true" />
-                    </div>
-                    Upcoming Sessions
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4 p-6">
-                  {upcomingSessions.map((session, index) => (
-                    <motion.article
-                      key={index}
-                      className="p-4 rounded-2xl bg-gradient-to-r from-background to-muted/30 hover:from-accent/5 hover:to-primary/5 transition-all duration-300 border border-border/30"
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.3, delay: 0.1 * index }}
-                    >
-                      <h4 className="font-semibold text-sm text-foreground mb-1">{session.topic}</h4>
-                      <p className="text-xs text-muted-foreground mb-3">with {session.mentee}</p>
-                      <div className="flex justify-between items-center">
-                        <time className="text-xs text-primary font-semibold bg-primary/10 px-2 py-1 rounded-lg">{session.date}</time>
-                        <time className="text-xs font-bold text-foreground bg-accent/10 px-2 py-1 rounded-lg">{session.time}</time>
-                      </div>
-                    </motion.article>
-                  ))}
-                  
-                  <GradientButton 
-                    variant="primary" 
-                    size="sm" 
-                    className="w-full mt-6 bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-primary-foreground border-0 shadow-lg hover:shadow-xl transition-all duration-300 focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                    aria-label="Manage schedule"
-                  >
-                    <Calendar className="h-4 w-4 mr-2" aria-hidden="true" />
-                    Manage Schedule
-                  </GradientButton>
-                </CardContent>
-              </Card>
-            </motion.section>
-
+          <aside className="space-y-6">
             {/* Performance Overview */}
             <motion.section
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.6 }}
-              aria-labelledby="performance-heading"
+              transition={{ duration: 0.6, delay: 0.4 }}
             >
-              <Card className="border-0 bg-gradient-to-br from-background to-muted/20 shadow-xl rounded-2xl overflow-hidden">
-                <CardHeader className="bg-gradient-to-r from-accent/10 via-primary/5 to-accent/10 border-b border-border/30 pb-6">
-                  <CardTitle className="flex items-center gap-3" id="performance-heading">
-                    <div className="p-2 rounded-xl bg-accent/10 border border-accent/20">
-                      <TrendingUp className="h-4 w-4 text-accent" aria-hidden="true" />
-                    </div>
-                    This Month's Performance
+              <Card className="border-0 shadow-md bg-white">
+                <CardHeader className="border-b border-slate-100 pb-4">
+                  <CardTitle className="flex items-center gap-2 text-slate-900 text-base">
+                    <TrendingUp className="h-4 w-4 text-emerald-500" />
+                    Performance Overview
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-6 p-6">
+                <CardContent className="p-5 space-y-4">
                   <div className="space-y-4">
-                    <div className="p-4 rounded-2xl bg-gradient-to-r from-background to-muted/30 border border-border/30">
-                      <div className="flex justify-between items-center mb-3">
-                        <span className="text-sm font-medium text-foreground">Sessions Goal</span>
-                        <span className="text-sm font-bold text-primary bg-primary/10 px-2 py-1 rounded-lg">18/20</span>
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm text-slate-600">Sessions Goal</span>
+                        <span className="text-sm font-bold text-primary">
+                          {stats?.sessions_this_month ?? 0}/20
+                        </span>
                       </div>
-                      <div className="w-full bg-muted/50 rounded-full h-3 shadow-inner" role="progressbar" aria-valuenow={90} aria-valuemin={0} aria-valuemax={100} aria-label="Sessions goal progress: 90%">
-                        <div className="bg-gradient-to-r from-primary to-accent h-3 rounded-full transition-all duration-700 shadow-sm" style={{ width: '90%' }}></div>
+                      <div className="w-full bg-slate-100 rounded-full h-2.5">
+                        <div
+                          className="bg-gradient-to-r from-primary to-blue-500 h-2.5 rounded-full transition-all duration-700"
+                          style={{ width: `${Math.min(100, ((stats?.sessions_this_month ?? 0) / 20) * 100)}%` }}
+                        />
                       </div>
                     </div>
-                    
-                    <div className="p-4 rounded-2xl bg-gradient-to-r from-background to-muted/30 border border-border/30">
-                      <div className="flex justify-between items-center mb-3">
-                        <span className="text-sm font-medium text-foreground">Satisfaction Rate</span>
-                        <span className="text-sm font-bold text-accent bg-accent/10 px-2 py-1 rounded-lg">96%</span>
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm text-slate-600">Satisfaction Rate</span>
+                        <span className="text-sm font-bold text-emerald-600">
+                          {stats?.average_rating ? `${((stats.average_rating / 5) * 100).toFixed(0)}%` : '—'}
+                        </span>
                       </div>
-                      <div className="w-full bg-muted/50 rounded-full h-3 shadow-inner" role="progressbar" aria-valuenow={96} aria-valuemin={0} aria-valuemax={100} aria-label="Satisfaction rate: 96%">
-                        <div className="bg-gradient-to-r from-accent to-primary h-3 rounded-full transition-all duration-700 shadow-sm" style={{ width: '96%' }}></div>
+                      <div className="w-full bg-slate-100 rounded-full h-2.5">
+                        <div
+                          className="bg-gradient-to-r from-emerald-500 to-teal-500 h-2.5 rounded-full transition-all duration-700"
+                          style={{ width: stats?.average_rating ? `${(stats.average_rating / 5) * 100}%` : '0%' }}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm text-slate-600">Mentee Capacity</span>
+                        <span className="text-sm font-bold text-violet-600">
+                          {stats?.total_mentees ?? 0}/50
+                        </span>
+                      </div>
+                      <div className="w-full bg-slate-100 rounded-full h-2.5">
+                        <div
+                          className="bg-gradient-to-r from-violet-500 to-purple-500 h-2.5 rounded-full transition-all duration-700"
+                          style={{ width: `${Math.min(100, ((stats?.total_mentees ?? 0) / 50) * 100)}%` }}
+                        />
                       </div>
                     </div>
                   </div>
 
-                  <div className="pt-4 space-y-3">
-                    <GradientButton 
-                      variant="outline" 
-                      size="sm" 
-                      className="w-full bg-gradient-to-r from-background to-muted/20 border-2 border-primary/30 text-primary hover:border-primary hover:bg-gradient-to-r hover:from-primary/10 hover:to-accent/10 hover:text-primary transition-all duration-300 focus:ring-2 focus:ring-primary focus:ring-offset-2 shadow-md hover:shadow-lg"
-                      aria-label="View detailed analytics"
-                    >
-                      <BarChart3 className="h-4 w-4 mr-2" aria-hidden="true" />
-                      View Analytics
-                    </GradientButton>
-                    <GradientButton 
-                      variant="ghost" 
-                      size="sm" 
-                      className="w-full bg-gradient-to-r from-muted/20 to-background text-foreground hover:bg-gradient-to-r hover:from-muted/40 hover:to-muted/20 border border-border/30 hover:border-border transition-all duration-300 focus:ring-2 focus:ring-primary focus:ring-offset-2 shadow-md hover:shadow-lg"
-                      aria-label="Update profile information"
-                    >
-                      <Settings className="h-4 w-4 mr-2" aria-hidden="true" />
-                      Update Profile
-                    </GradientButton>
+                  <div className="pt-2 grid grid-cols-2 gap-2">
+                    <Button variant="outline" size="sm" className="w-full text-xs gap-1">
+                      <BarChart3 className="h-3 w-3" />
+                      Analytics
+                    </Button>
+                    <Button variant="outline" size="sm" className="w-full text-xs gap-1" onClick={openEditProfile}>
+                      <Settings className="h-3 w-3" />
+                      Settings
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.section>
+
+            {/* Quick Info */}
+            <motion.section
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.5 }}
+            >
+              <Card className="border-0 shadow-md bg-gradient-to-br from-primary/5 to-blue-600/5 border border-primary/10">
+                <CardContent className="p-5 space-y-3">
+                  <h4 className="font-semibold text-slate-800 flex items-center gap-2">
+                    <BookOpen className="h-4 w-4 text-primary" />
+                    Platform Overview
+                  </h4>
+                  <div className="space-y-2">
+                    {[
+                      { label: 'Total Mentors', value: stats?.total_mentors ?? 0 },
+                      { label: 'Total Learners', value: stats?.total_mentees ?? 0 },
+                    ].map(({ label, value }) => (
+                      <div key={label} className="flex justify-between items-center text-sm">
+                        <span className="text-slate-500">{label}</span>
+                        <span className="font-bold text-slate-800">{value}</span>
+                      </div>
+                    ))}
                   </div>
                 </CardContent>
               </Card>
@@ -468,6 +564,65 @@ const MentorDashboard: React.FC = () => {
           </aside>
         </div>
       </main>
+
+      {/* Edit Profile Modal */}
+      {editingProfile && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+          >
+            <div className="sticky top-0 bg-white rounded-t-3xl border-b border-slate-100 px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-slate-900">Edit Profile</h2>
+              <button onClick={() => setEditingProfile(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-colors">
+                <X className="h-5 w-5 text-slate-500" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              {[
+                { key: 'bio', label: 'Bio', type: 'textarea' },
+                { key: 'skills', label: 'Skills (comma-separated)', type: 'text' },
+                { key: 'expertise', label: 'Expertise (comma-separated)', type: 'text' },
+                { key: 'job_title', label: 'Job Title', type: 'text' },
+                { key: 'company', label: 'Company', type: 'text' },
+                { key: 'location', label: 'Location', type: 'text' },
+                { key: 'experience_years', label: 'Years of Experience', type: 'number' },
+                { key: 'hourly_rate', label: 'Hourly Rate (USD, 0 for free)', type: 'number' },
+                { key: 'languages_spoken', label: 'Languages Spoken', type: 'text' },
+                { key: 'mentor_availability', label: 'Availability (e.g. Weekends, Evenings)', type: 'text' },
+                { key: 'linkedin_url', label: 'LinkedIn URL', type: 'url' },
+              ].map(({ key, label, type }) => (
+                <div key={key}>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">{label}</label>
+                  {type === 'textarea' ? (
+                    <textarea
+                      value={String(profileForm[key] || '')}
+                      onChange={e => setProfileForm(prev => ({ ...prev, [key]: e.target.value }))}
+                      rows={3}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary text-sm"
+                    />
+                  ) : (
+                    <input
+                      type={type}
+                      value={String(profileForm[key] || '')}
+                      onChange={e => setProfileForm(prev => ({ ...prev, [key]: type === 'number' ? Number(e.target.value) : e.target.value }))}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary text-sm"
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className="sticky bottom-0 bg-white border-t border-slate-100 rounded-b-3xl px-6 py-4 flex gap-3">
+              <Button variant="outline" onClick={() => setEditingProfile(false)} className="flex-1">Cancel</Button>
+              <Button onClick={handleSaveProfile} disabled={isSaving} className="flex-1 gap-2">
+                {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+                Save Changes
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </PageWrapper>
   );
 };

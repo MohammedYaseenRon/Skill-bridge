@@ -21,6 +21,12 @@ from .user import (
     UserInDB
 )
 
+# Import session model
+from .session import MentorSession
+
+# Import message model
+from .message import DirectMessage
+
 # Import recommendation models with error handling for optional functionality
 try:
     from .recommendation import (

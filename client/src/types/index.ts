@@ -3,6 +3,7 @@ export interface User {
   full_name: string;
   email: string;
   role: 'learner' | 'mentor' | 'admin';
+  is_mentor: boolean;
   phone_number?: string;
   profile_picture_url?: string;
   bio?: string;
@@ -16,6 +17,16 @@ export interface User {
   availability?: string;
   skills_interested?: string;
   current_skills?: string;
+  // Mentor fields
+  skills?: string;
+  expertise?: string;
+  experience_years?: number;
+  languages_spoken?: string;
+  mentor_availability?: string;
+  hourly_rate?: number;
+  linkedin_url?: string;
+  company?: string;
+  job_title?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -54,7 +65,7 @@ export interface RegisterData {
   bio?: string;
   location?: string;
   is_mentor: boolean;
-  
+
   // Learner fields
   learning_goal?: string;
   preferred_language?: string;
@@ -64,7 +75,7 @@ export interface RegisterData {
   availability?: string;
   skills_interested?: string;
   current_skills?: string;
-  
+
   // Mentor fields
   skills?: string;
   expertise?: string;
@@ -95,4 +106,23 @@ export interface ApiResponse<T> {
 
 export interface ValidationErrors {
   [key: string]: string;
+}
+
+export interface MentorData {
+  id: number;
+  full_name: string;
+  email: string;
+  bio?: string;
+  skills?: string;
+  expertise?: string;
+  experience_years?: number;
+  hourly_rate?: number;
+  location?: string;
+  company?: string;
+  job_title?: string;
+  linkedin_url?: string;
+  languages_spoken?: string;
+  mentor_availability?: string;
+  profile_picture_url?: string;
+  rating?: number;
 }
